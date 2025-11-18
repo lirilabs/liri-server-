@@ -1,31 +1,13 @@
 {
-  "name": "liri-database-manager",
-  "version": "2.0.0",
-  "description": "Secure GitHub-based database management API",
+  "name": "github-repo-list",
+  "version": "1.0.0",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
-    "build": "vercel build",
-    "deploy": "vercel deploy --prod",
-    "lint": "eslint api/**/*.js"
+    "start": "node index.js"
   },
   "dependencies": {
+    "express": "^4.19.2",
     "node-fetch": "^3.3.2"
-  },
-  "devDependencies": {
-    "vercel": "^33.0.0",
-    "eslint": "^8.56.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "keywords": [
-    "github",
-    "database",
-    "api",
-    "file-management"
-  ],
-  "author": "Liri Labs",
-  "license": "MIT"
+  }
 }
