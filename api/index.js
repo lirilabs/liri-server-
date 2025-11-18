@@ -4,6 +4,12 @@ import fetch from 'node-fetch';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Allow all origins
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  next();
+});
+
 // Replace with your actual PAT
 const GITHUB_PAT = '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';
 
