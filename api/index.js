@@ -13,7 +13,7 @@ app.use((req, res, next) => {
 // Replace with your actual PAT
 const GITHUB_PAT = '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';
 
-app.get('/repos', async (req, res) => {
+app.get('/api', async (req, res) => {
   try {
     const response = await fetch('https://api.github.com/repos/lirilabs/liri-database-v1-2025', {
       headers: {
