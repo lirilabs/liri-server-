@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Liri DB Manager</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    textarea { width: 100%; height: 150px; }
+    input, button { padding: 10px; margin: 5px 0; width: 100%; }
+    pre { background: #eee; padding: 10px; }
+  </style>
+</head>
+<body>
+
+<h2>Liri Database Manager</h2>
+
+<button onclick="listFiles()">List Files</button>
+<pre id="list"></pre>
+
+<hr>
+
+<h3>Read File</h3>
+<input id="readName" placeholder="file.json">
+<button onclick="readFile()">Read</button>
+<pre id="read"></pre>
+
+<hr>
+
+<h3>Write / Update File</h3>
+<input id="writeName" placeholder="file.json">
+<textarea id="writeContent" placeholder="File content..."></textarea>
+<button onclick="writeFile()">Save</button>
+<pre id="write"></pre>
+
+<hr>
+
+<h3>Delete File</h3>
+<input id="deleteName" placeholder="file.json">
+<button onclick="deleteFile()">Delete</button>
+<pre id="delete"></pre>
+
+<script>
+async function listFiles() {
+  const r = await fetch("/api/list");
+  document.getElementById("list").textContent = await r.text();
+}
+
+async function readFile() {
+  const f = document.getElementById("readName").value;
+  const r = await fetch(`/api/read?file=${f}`);
+  document.getElementById("read").textContent = await r.text();
+}
+
+async function writeFile() {
+  const f = document.getElementById("writeName").value;
+  const c = document.getElementById("writeContent").value;
+
+  const r = await fetch("/api/write", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file: f, content: c })
+  });
+  
+  document.getElementById("write").textContent = await r.text();
+}
+
+async function deleteFile() {
+  const f = document.getElementById("deleteName").value;
+
+  const r = await fetch("/api/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file: f })
+  });
+
+  document.getElementById("delete").textContent = await r.text();
+}
+</script>
+
+</body>
+</html>
