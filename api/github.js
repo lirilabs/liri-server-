@@ -5,45 +5,57 @@ export default async function handler(req, res) {
     const owner = "lirilabs";
     const repoName = "liri-database-v1-2025";
 
-    // Fetch repo metadata
-    const repoInfo = await fetch(
+    // 1. FETCH REPO INFO
+    const repoInfoResp = await fetch(
       `https://api.github.com/repos/${owner}/${repoName}`,
       {
         headers: {
-          "Authorization": `token ${process.env.GITHUB_TOKEN}`,
+          Authorization: `token ${process.env.GITHUB_TOKEN}`,
           "User-Agent": "liri-vercel-github-reader"
         }
       }
     );
 
-    if (!repoInfo.ok) {
-      return res.status(repoInfo.status).json({
-        error: "Unable to fetch repo information",
-        details: await repoInfo.text()
+    const repoInfo = await repoInfoResp.json();
+
+    if (!repoInfoResp.ok) {
+      return res.status(repoInfoResp.status).json({
+        error: "Failed to fetch repository",
+        details: repoInfo
       });
     }
 
-    const repoData = await repoInfo.json();
-
-    // Fetch file list from the repo root
-    const fileListReq = await fetch(
+    // 2. FETCH CONTENTS OF ROOT DIRECTORY
+    const fileListResp = await fetch(
       `https://api.github.com/repos/${owner}/${repoName}/contents`,
       {
         headers: {
-          "Authorization": `token ${process.env.GITHUB_TOKEN}`,
+          Authorization: `token ${process.env.GITHUB_TOKEN}`,
           "User-Agent": "liri-vercel-github-reader"
         }
       }
     );
 
-    const fileList = await fileListReq.json();
+    const fileList = await fileListResp.json();
 
+    // SAFETY CHECK — GitHub returns object on error
+    if (!Array.isArray(fileList)) {
+      return res.status(200).json({
+        repository: repoInfo.full_name,
+        description: repoInfo.description,
+        default_branch: repoInfo.default_branch,
+        message: "Repo exists but root folder is empty or GitHub returned an error",
+        fileListReturned: fileList // send raw GitHub message for debugging
+      });
+    }
+
+    // 3. SUCCESS
     return res.status(200).json({
-      repository: repoData.full_name,
-      description: repoData.description,
-      default_branch: repoData.default_branch,
-      stars: repoData.stargazers_count,
-      forks: repoData.forks,
+      repository: repoInfo.full_name,
+      description: repoInfo.description,
+      default_branch: repoInfo.default_branch,
+      stars: repoInfo.stargazers_count,
+      forks: repoInfo.forks,
       files: fileList.map(f => ({
         name: f.name,
         path: f.path,
