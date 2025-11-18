@@ -1,79 +1,563 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Liri DB Manager</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Liri Database Manager</title>
   <style>
-    body { font-family: Arial; padding: 20px; }
-    textarea { width: 100%; height: 150px; }
-    input, button { padding: 10px; margin: 5px 0; width: 100%; }
-    pre { background: #eee; padding: 10px; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+    
+    .header p {
+      opacity: 0.9;
+      font-size: 1.1em;
+    }
+    
+    .content {
+      padding: 30px;
+    }
+    
+    .section {
+      margin-bottom: 40px;
+      padding: 25px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+    
+    .section h2 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 1.5em;
+    }
+    
+    .input-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #555;
+      font-weight: 600;
+    }
+    
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      transition: border-color 0.3s;
+    }
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    textarea {
+      min-height: 180px;
+      resize: vertical;
+    }
+    
+    button {
+      padding: 12px 24px;
+      margin: 5px 5px 5px 0;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+    }
+    
+    .btn-info {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+      color: white;
+    }
+    
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+      line-height: 1.5;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-left: 10px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .error {
+      background: #fee;
+      border-left-color: #f5576c;
+      color: #c00;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+    
+    .success {
+      background: #efe;
+      border-left-color: #43e97b;
+      color: #060;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+    
+    .file-item {
+      background: white;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #ddd;
+    }
+    
+    .file-item:hover {
+      background: #f8f9fa;
+      border-color: #667eea;
+    }
+    
+    .file-name {
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .file-size {
+      color: #888;
+      font-size: 0.9em;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      margin-right: 10px;
+    }
   </style>
 </head>
 <body>
 
-<h2>Liri Database Manager</h2>
+<div class="container">
+  <div class="header">
+    <h1>🗄️ Liri Database Manager</h1>
+    <p>Secure GitHub-based file management system</p>
+  </div>
 
-<button onclick="listFiles()">List Files</button>
-<pre id="list"></pre>
+  <div class="content">
+    
+    <!-- List Files Section -->
+    <div class="section">
+      <h2>📂 List Files</h2>
+      <button class="btn-info" onclick="listFiles()">
+        <span id="listBtn">Refresh File List</span>
+      </button>
+      <pre id="listOutput">Click "Refresh File List" to view all files...</pre>
+    </div>
 
-<hr>
+    <!-- Read File Section -->
+    <div class="section">
+      <h2>📖 Read File</h2>
+      <div class="input-group">
+        <label for="readName">Filename:</label>
+        <input 
+          id="readName" 
+          type="text"
+          placeholder="example.json" 
+          aria-label="Filename to read"
+        >
+      </div>
+      <button class="btn-primary" onclick="readFile()">
+        <span id="readBtn">Read File</span>
+      </button>
+      <pre id="readOutput">File content will appear here...</pre>
+    </div>
 
-<h3>Read File</h3>
-<input id="readName" placeholder="file.json">
-<button onclick="readFile()">Read</button>
-<pre id="read"></pre>
+    <!-- Write/Update File Section -->
+    <div class="section">
+      <h2>✏️ Write / Update File</h2>
+      <div class="input-group">
+        <label for="writeName">Filename:</label>
+        <input 
+          id="writeName" 
+          type="text"
+          placeholder="example.json"
+          aria-label="Filename to write"
+        >
+      </div>
+      <div class="input-group">
+        <label for="writeContent">Content:</label>
+        <textarea 
+          id="writeContent" 
+          placeholder='{"key": "value"}'
+          aria-label="File content"
+        ></textarea>
+      </div>
+      <button class="btn-success" onclick="writeFile()">
+        <span id="writeBtn">Save File</span>
+      </button>
+      <pre id="writeOutput">Result will appear here...</pre>
+    </div>
 
-<hr>
+    <!-- Delete File Section -->
+    <div class="section">
+      <h2>🗑️ Delete File</h2>
+      <div class="input-group">
+        <label for="deleteName">Filename:</label>
+        <input 
+          id="deleteName" 
+          type="text"
+          placeholder="example.json"
+          aria-label="Filename to delete"
+        >
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="deleteConfirm" aria-label="Confirm deletion">
+        <label for="deleteConfirm" style="margin: 0;">I confirm I want to delete this file</label>
+      </div>
+      <button class="btn-danger" onclick="deleteFile()">
+        <span id="deleteBtn">Delete File</span>
+      </button>
+      <pre id="deleteOutput">Result will appear here...</pre>
+    </div>
 
-<h3>Write / Update File</h3>
-<input id="writeName" placeholder="file.json">
-<textarea id="writeContent" placeholder="File content..."></textarea>
-<button onclick="writeFile()">Save</button>
-<pre id="write"></pre>
-
-<hr>
-
-<h3>Delete File</h3>
-<input id="deleteName" placeholder="file.json">
-<button onclick="deleteFile()">Delete</button>
-<pre id="delete"></pre>
+  </div>
+</div>
 
 <script>
+// Utility function to sanitize HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Utility function to format JSON
+function formatJSON(obj) {
+  try {
+    return JSON.stringify(obj, null, 2);
+  } catch (e) {
+    return String(obj);
+  }
+}
+
+// Show loading state
+function setLoading(elementId, isLoading) {
+  const btn = document.getElementById(elementId);
+  if (isLoading) {
+    btn.innerHTML = btn.textContent + ' <span class="loading"></span>';
+    btn.disabled = true;
+  } else {
+    btn.innerHTML = btn.textContent.replace(' ', '');
+    btn.disabled = false;
+  }
+}
+
+// Display error
+function showError(outputId, message) {
+  const output = document.getElementById(outputId);
+  output.innerHTML = `<div class="error">❌ ${escapeHtml(message)}</div>`;
+}
+
+// Display success
+function showSuccess(outputId, message, data) {
+  const output = document.getElementById(outputId);
+  output.innerHTML = `<div class="success">✅ ${escapeHtml(message)}</div>`;
+  if (data) {
+    output.innerHTML += formatJSON(data);
+  }
+}
+
+// List all files
 async function listFiles() {
-  const r = await fetch("/api/list");
-  document.getElementById("list").textContent = await r.text();
-}
-
-async function readFile() {
-  const f = document.getElementById("readName").value;
-  const r = await fetch(`/api/read?file=${f}`);
-  document.getElementById("read").textContent = await r.text();
-}
-
-async function writeFile() {
-  const f = document.getElementById("writeName").value;
-  const c = document.getElementById("writeContent").value;
-
-  const r = await fetch("/api/write", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ file: f, content: c })
-  });
+  const outputId = 'listOutput';
+  setLoading('listBtn', true);
   
-  document.getElementById("write").textContent = await r.text();
+  try {
+    const response = await fetch('/api/list', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to list files');
+    }
+    
+    if (data.success && data.files && data.files.length > 0) {
+      let html = `<div style="color: #43e97b; margin-bottom: 15px;">✅ Found ${data.count} file(s)</div>`;
+      
+      data.files.forEach(file => {
+        html += `<div class="file-item">
+          <div>
+            <span class="file-name">${escapeHtml(file.name)}</span>
+            <span class="file-size"> (${(file.size / 1024).toFixed(2)} KB)</span>
+          </div>
+          <span style="color: #888; font-size: 0.85em;">${escapeHtml(file.type)}</span>
+        </div>`;
+      });
+      
+      document.getElementById(outputId).innerHTML = html;
+    } else {
+      document.getElementById(outputId).textContent = 'No files found in repository.';
+    }
+    
+  } catch (error) {
+    showError(outputId, error.message);
+  } finally {
+    setLoading('listBtn', false);
+  }
 }
 
+// Read a specific file
+async function readFile() {
+  const filename = document.getElementById('readName').value.trim();
+  const outputId = 'readOutput';
+  
+  if (!filename) {
+    showError(outputId, 'Please enter a filename');
+    return;
+  }
+  
+  setLoading('readBtn', true);
+  
+  try {
+    const response = await fetch(`/api/read?file=${encodeURIComponent(filename)}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to read file');
+    }
+    
+    if (data.success) {
+      showSuccess(outputId, `File "${filename}" read successfully`, {
+        size: `${(data.size / 1024).toFixed(2)} KB`,
+        content: data.content
+      });
+    }
+    
+  } catch (error) {
+    showError(outputId, error.message);
+  } finally {
+    setLoading('readBtn', false);
+  }
+}
+
+// Write or update a file
+async function writeFile() {
+  const filename = document.getElementById('writeName').value.trim();
+  const content = document.getElementById('writeContent').value;
+  const outputId = 'writeOutput';
+  
+  if (!filename) {
+    showError(outputId, 'Please enter a filename');
+    return;
+  }
+  
+  if (!content) {
+    showError(outputId, 'Please enter file content');
+    return;
+  }
+  
+  setLoading('writeBtn', true);
+  
+  try {
+    const response = await fetch('/api/write', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ 
+        file: filename, 
+        content: content 
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to write file');
+    }
+    
+    if (data.success) {
+      showSuccess(outputId, `File "${filename}" ${data.action} successfully`, {
+        commit: data.commit
+      });
+      
+      // Clear the form
+      document.getElementById('writeName').value = '';
+      document.getElementById('writeContent').value = '';
+    }
+    
+  } catch (error) {
+    showError(outputId, error.message);
+  } finally {
+    setLoading('writeBtn', false);
+  }
+}
+
+// Delete a file
 async function deleteFile() {
-  const f = document.getElementById("deleteName").value;
-
-  const r = await fetch("/api/delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ file: f })
-  });
-
-  document.getElementById("delete").textContent = await r.text();
+  const filename = document.getElementById('deleteName').value.trim();
+  const confirmed = document.getElementById('deleteConfirm').checked;
+  const outputId = 'deleteOutput';
+  
+  if (!filename) {
+    showError(outputId, 'Please enter a filename');
+    return;
+  }
+  
+  if (!confirmed) {
+    showError(outputId, 'Please confirm deletion by checking the checkbox');
+    return;
+  }
+  
+  // Additional confirmation dialog
+  if (!confirm(`Are you absolutely sure you want to delete "${filename}"? This action cannot be undone.`)) {
+    return;
+  }
+  
+  setLoading('deleteBtn', true);
+  
+  try {
+    const response = await fetch('/api/delete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ 
+        file: filename,
+        confirm: true
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to delete file');
+    }
+    
+    if (data.success) {
+      showSuccess(outputId, data.message, {
+        commit: data.commit
+      });
+      
+      // Clear the form
+      document.getElementById('deleteName').value = '';
+      document.getElementById('deleteConfirm').checked = false;
+      
+      // Refresh file list
+      listFiles();
+    }
+    
+  } catch (error) {
+    showError(outputId, error.message);
+  } finally {
+    setLoading('deleteBtn', false);
+  }
 }
+
+// Load files on page load
+window.addEventListener('DOMContentLoaded', () => {
+  listFiles();
+});
 </script>
 
 </body>
