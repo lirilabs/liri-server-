@@ -3,7 +3,7 @@ import fetch from "node-fetch";
 export default async function handler(req, res) {
   try {
     const owner = "lirilabs";
-    const repoName = "liri-app";  // UPDATED to read this repo
+    const repoName = "liri-app-";  // UPDATED to read this repo
 
     const headers = {
       Authorization: `token ${process.env.GITHUB_TOKEN}`,
