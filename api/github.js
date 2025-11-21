@@ -3,7 +3,14 @@ import fetch from "node-fetch";
 export default async function handler(req, res) {
 
   // CORS ----------------------------------------------------------
-  const allowedOrigin = "https://lirilabs.netlify.app";
+const allowedOrigins = [
+  "https://lirilabs.netlify.app",
+  "http://localhost:3000",
+  "http://localhost",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1"
+  "http://localhost:5173/"
+];
   const origin = req.headers.origin;
 
   res.setHeader("Access-Control-Allow-Credentials", "true");
