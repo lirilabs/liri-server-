@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 
 export default async function handler(req, res) {
 
-  // CORS RESTRICTION ---------------------------------------------
+  // CORS ----------------------------------------------------------
   const allowedOrigin = "https://lirilabs.netlify.app";
   const origin = req.headers.origin;
 
@@ -30,7 +30,24 @@ export default async function handler(req, res) {
       "User-Agent": "liri-version-content-reader"
     };
 
-    // Recursive folder reader
+    // Helper to fetch JSON file contents ----------------------------------------
+    async function fetchJsonContent(downloadUrl) {
+      try {
+        const resp = await fetch(downloadUrl);
+        const text = await resp.text();
+
+        try {
+          return JSON.parse(text);
+        } catch (err) {
+          return { invalidJson: true, raw: text };
+        }
+
+      } catch (e) {
+        return { error: "Failed to download JSON", details: e.message };
+      }
+    }
+
+    // Recursive folder reader ----------------------------------------------------
     async function readFolder(path = "") {
       const url = `https://api.github.com/repos/${owner}/${repoName}/contents/${path}`;
       const resp = await fetch(url, { headers });
@@ -44,6 +61,7 @@ export default async function handler(req, res) {
 
       for (const item of data) {
         if (item.type === "dir") {
+          // Read subfolder
           const children = await readFolder(item.path);
           results.push({
             name: item.name,
@@ -51,20 +69,30 @@ export default async function handler(req, res) {
             type: "directory",
             children
           });
+
         } else {
-          results.push({
+          // File entry
+          const fileObj = {
             name: item.name,
             path: item.path,
             type: "file",
             download_url: item.download_url
-          });
+          };
+
+          // Special: If JSON file, read and attach content
+          if (item.name.endsWith(".json")) {
+            fileObj.jsonContent = await fetchJsonContent(item.download_url);
+          }
+
+          results.push(fileObj);
         }
       }
 
       return results;
     }
+    // --------------------------------------------------------------------------
 
-    // Read root folder
+    // Read repo root
     const rootResp = await fetch(
       `https://api.github.com/repos/${owner}/${repoName}/contents`,
       { headers }
@@ -72,13 +100,10 @@ export default async function handler(req, res) {
     const root = await rootResp.json();
 
     if (!Array.isArray(root)) {
-      return res.status(200).json({
-        message: "Unexpected GitHub structure",
-        raw: root
-      });
+      return res.status(200).json({ message: "Unexpected GitHub structure", raw: root });
     }
 
-    // Find version folders (v1, v2, v10...)
+    // Detect version folders
     const versionFolders = root
       .filter(item => item.type === "dir" && /^v\d+$/i.test(item.name))
       .map(item => ({
@@ -90,17 +115,19 @@ export default async function handler(req, res) {
 
     const content = {};
 
-    // Read content for each version
+    // Read content for each version folder
     for (const v of versionFolders) {
       content[v.name] = await readFolder(v.path);
     }
 
+    // Latest folder
     const latest = versionFolders.length > 0 ? versionFolders[0] : null;
 
     if (latest) {
-      latest.files = content[latest.name];
+      latest.files = content[latest.name]; // Add file list
     }
 
+    // Final JSON response
     return res.status(200).json({
       total: versionFolders.length,
       versions: versionFolders,
