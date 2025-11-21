@@ -3,7 +3,7 @@ import fetch from "node-fetch";
 export default async function handler(req, res) {
   try {
     const owner = "lirilabs";
-    const repoName = "liri-app"; // same repo
+    const repoName = "liri-app";  // UPDATED to read this repo
 
     const headers = {
       Authorization: `token ${process.env.GITHUB_TOKEN}`,
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 3. Filter folders that match pattern: v1, v2, v3...
+    // 3. Filter versioned folders: v1, v2, v3...
     const versionFolders = contents
       .filter(item => item.type === "dir" && /^v\d+$/i.test(item.name))
       .map(item => ({
