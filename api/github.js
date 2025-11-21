@@ -3,57 +3,48 @@ import fetch from "node-fetch";
 export default async function handler(req, res) {
   try {
     const owner = "lirilabs";
-    const repoName = "liri-app-";   // FIXED repo name
+    const repoName = "liri-app-"; // your repo
 
     const headers = {
       Authorization: `token ${process.env.GITHUB_TOKEN}`,
-      "User-Agent": "liri-recursive-reader"
+      "User-Agent": "liri-version-reader"
     };
 
-    // Recursive function to read any folder
-    async function readFolder(path = "") {
-      const url = `https://api.github.com/repos/${owner}/${repoName}/contents/${path}`;
+    // Fetch root directory
+    const contentsResp = await fetch(
+      `https://api.github.com/repos/${owner}/${repoName}/contents`,
+      { headers }
+    );
 
-      const resp = await fetch(url, { headers });
-      const data = await resp.json();
+    const contents = await contentsResp.json();
 
-      if (!Array.isArray(data)) {
-        return { error: true, data };
-      }
-
-      // Loop through folder items
-      const results = [];
-
-      for (const item of data) {
-        if (item.type === "dir") {
-          // Read subfolder recursively
-          const sub = await readFolder(item.path);
-          results.push({
-            name: item.name,
-            path: item.path,
-            type: "directory",
-            children: sub
-          });
-        } else {
-          // Add file
-          results.push({
-            name: item.name,
-            path: item.path,
-            type: "file",
-            download_url: item.download_url
-          });
-        }
-      }
-
-      return results;
+    if (!Array.isArray(contents)) {
+      return res.status(200).json({
+        message: "Unexpected GitHub response",
+        raw: contents
+      });
     }
 
-    // Read entire repo root recursively
-    const fullTree = await readFolder("");
+    // Find v1, v2, v10, v99...
+    const versionFolders = contents
+      .filter(item => item.type === "dir" && /^v\d+$/i.test(item.name))
+      .map(item => ({
+        name: item.name,
+        number: parseInt(item.name.replace("v", ""), 10),
+        path: item.path,
+        type: item.type,
+        url: item.url
+      }));
+
+    // Sort by number highest → lowest
+    versionFolders.sort((a, b) => b.number - a.number);
+
+    const latestVersion = versionFolders.length > 0 ? versionFolders[0] : null;
 
     return res.status(200).json({
-      repository: `${owner}/${repoName}`,
-      tree: fullTree
+      version_count: versionFolders.length,
+      versions: versionFolders,     // all versions
+      latest: latestVersion         // highest version like v10, v22...
     });
 
   } catch (error) {
