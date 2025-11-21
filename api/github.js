@@ -15,22 +15,34 @@ export default async function handler(req, res) {
 
   try {
     const owner = "lirilabs";
-    const repoName = "liri-app-"; // your repo
+    const repoName = "liri-app-";
 
     const headers = {
       Authorization: `token ${process.env.GITHUB_TOKEN}`,
-      "User-Agent": "liri-version-content-reader"
+      "User-Agent": "liri-version-content-reader",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache"
+    };
+
+    // FORCE NO-CACHE for file content downloads
+    const fileNoCacheHeaders = {
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache"
     };
 
     // Helper: Fetch JSON file contents ----------------------------------------
     async function fetchJsonContent(downloadUrl) {
       try {
-        const resp = await fetch(downloadUrl);
+        const resp = await fetch(downloadUrl, {
+          method: "GET",
+          headers: fileNoCacheHeaders
+        });
+
         const text = await resp.text();
 
         try {
           return JSON.parse(text);
-        } catch (err) {
+        } catch {
           return { invalidJson: true, raw: text };
         }
 
@@ -42,6 +54,7 @@ export default async function handler(req, res) {
     // Recursive folder reader ----------------------------------------------------
     async function readFolder(path = "") {
       const url = `https://api.github.com/repos/${owner}/${repoName}/contents/${path}`;
+
       const resp = await fetch(url, { headers });
       const data = await resp.json();
 
@@ -69,7 +82,7 @@ export default async function handler(req, res) {
             download_url: item.download_url
           };
 
-          // Special: If .json, fetch content
+          // If JSON file → read content live (no-cache)
           if (item.name.endsWith(".json")) {
             fileObj.jsonContent = await fetchJsonContent(item.download_url);
           }
@@ -82,7 +95,7 @@ export default async function handler(req, res) {
     }
     // --------------------------------------------------------------------------
 
-    // Read root
+    // Read root folder (no-cache)
     const rootResp = await fetch(
       `https://api.github.com/repos/${owner}/${repoName}/contents`,
       { headers }
@@ -94,7 +107,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ message: "Unexpected GitHub structure", raw: root });
     }
 
-    // Version folder detection (v1, v2, v10)
+    // Detect version folders (v1, v2, v10...)
     const versionFolders = root
       .filter(item => item.type === "dir" && /^v\d+$/i.test(item.name))
       .map(item => ({
@@ -102,23 +115,22 @@ export default async function handler(req, res) {
         number: parseInt(item.name.replace("v", "")),
         path: item.path
       }))
-      .sort((a, b) => b.number - a.number); // highest version first
+      .sort((a, b) => b.number - a.number);
 
     const content = {};
 
-    // Read content of each version folder
+    // Read content of each version folder (no-cache)
     for (const v of versionFolders) {
       content[v.name] = await readFolder(v.path);
     }
 
-    // Latest version (highest v number)
+    // Latest version
     const latest = versionFolders.length > 0 ? versionFolders[0] : null;
 
     if (latest) {
       latest.files = content[latest.name];
     }
 
-    // Final Response
     return res.status(200).json({
       total: versionFolders.length,
       versions: versionFolders,
