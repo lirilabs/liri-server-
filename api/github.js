@@ -3,68 +3,63 @@ import fetch from "node-fetch";
 export default async function handler(req, res) {
   try {
     const owner = "lirilabs";
-    const repoName = "liri-database-v1-2025";
+    const repoName = "liri-database-v1-2025"; // same repo
 
-    // 1. FETCH REPO INFO
-    const repoInfoResp = await fetch(
+    const headers = {
+      Authorization: `token ${process.env.GITHUB_TOKEN}`,
+      "User-Agent": "liri-repo-version-reader"
+    };
+
+    // 1. Fetch repo info
+    const repoResp = await fetch(
       `https://api.github.com/repos/${owner}/${repoName}`,
-      {
-        headers: {
-          Authorization: `token ${process.env.GITHUB_TOKEN}`,
-          "User-Agent": "liri-vercel-github-reader"
-        }
-      }
+      { headers }
     );
+    const repoInfo = await repoResp.json();
 
-    const repoInfo = await repoInfoResp.json();
-
-    if (!repoInfoResp.ok) {
-      return res.status(repoInfoResp.status).json({
+    if (!repoResp.ok) {
+      return res.status(repoResp.status).json({
         error: "Failed to fetch repository",
         details: repoInfo
       });
     }
 
-    // 2. FETCH CONTENTS OF ROOT DIRECTORY
-    const fileListResp = await fetch(
+    // 2. Fetch root directory contents
+    const contentsResp = await fetch(
       `https://api.github.com/repos/${owner}/${repoName}/contents`,
-      {
-        headers: {
-          Authorization: `token ${process.env.GITHUB_TOKEN}`,
-          "User-Agent": "liri-vercel-github-reader"
-        }
-      }
+      { headers }
     );
+    const contents = await contentsResp.json();
 
-    const fileList = await fileListResp.json();
-
-    // SAFETY CHECK — GitHub returns object on error
-    if (!Array.isArray(fileList)) {
+    if (!Array.isArray(contents)) {
       return res.status(200).json({
-        repository: repoInfo.full_name,
-        description: repoInfo.description,
-        default_branch: repoInfo.default_branch,
-        message: "Repo exists but root folder is empty or GitHub returned an error",
-        fileListReturned: fileList // send raw GitHub message for debugging
+        message: "Root folder is empty or GitHub returned unexpected structure",
+        raw: contents
       });
     }
 
-    // 3. SUCCESS
+    // 3. Filter folders that match pattern: v1, v2, v3...
+    const versionFolders = contents
+      .filter(item => item.type === "dir" && /^v\d+$/i.test(item.name))
+      .map(item => ({
+        name: item.name,
+        path: item.path,
+        type: item.type,
+        url: item.url,
+        download_url: item.download_url
+      }));
+
     return res.status(200).json({
       repository: repoInfo.full_name,
       description: repoInfo.description,
       default_branch: repoInfo.default_branch,
-      stars: repoInfo.stargazers_count,
-      forks: repoInfo.forks,
-      files: fileList.map(f => ({
-        name: f.name,
-        path: f.path,
-        type: f.type,
-        download_url: f.download_url
-      }))
+      version_count: versionFolders.length,
+      versions: versionFolders
     });
 
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
+  } catch (error) {
+    return res.status(500).json({
+      error: error.message
+    });
   }
 }
