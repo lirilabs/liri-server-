@@ -3,53 +3,91 @@ import fetch from "node-fetch";
 export default async function handler(req, res) {
   try {
     const owner = "lirilabs";
-    const repoName = "liri-app-"; // your repo
+    const repoName = "liri-app"; 
 
     const headers = {
       Authorization: `token ${process.env.GITHUB_TOKEN}`,
-      "User-Agent": "liri-version-reader"
+      "User-Agent": "liri-version-content-reader"
     };
 
-    // Fetch root directory
-    const contentsResp = await fetch(
+    // Recursive reader for ANY folder ----------------------------------------------------
+    async function readFolder(path = "") {
+      const url = `https://api.github.com/repos/${owner}/${repoName}/contents/${path}`;
+      const resp = await fetch(url, { headers });
+      const data = await resp.json();
+
+      if (!Array.isArray(data)) {
+        return { error: true, raw: data };
+      }
+
+      const results = [];
+
+      for (const item of data) {
+        if (item.type === "dir") {
+          const children = await readFolder(item.path);
+          results.push({
+            name: item.name,
+            path: item.path,
+            type: "directory",
+            children
+          });
+        } else {
+          results.push({
+            name: item.name,
+            path: item.path,
+            type: "file",
+            download_url: item.download_url
+          });
+        }
+      }
+
+      return results;
+    }
+    // ------------------------------------------------------------------------------------
+
+    // Read root
+    const rootResp = await fetch(
       `https://api.github.com/repos/${owner}/${repoName}/contents`,
       { headers }
     );
+    const root = await rootResp.json();
 
-    const contents = await contentsResp.json();
-
-    if (!Array.isArray(contents)) {
+    if (!Array.isArray(root)) {
       return res.status(200).json({
-        message: "Unexpected GitHub response",
-        raw: contents
+        message: "Unexpected GitHub structure",
+        raw: root
       });
     }
 
-    // Find v1, v2, v10, v99...
-    const versionFolders = contents
+    // Detect version folders v1, v2, v10, v99
+    const versionFolders = root
       .filter(item => item.type === "dir" && /^v\d+$/i.test(item.name))
       .map(item => ({
         name: item.name,
-        number: parseInt(item.name.replace("v", ""), 10),
-        path: item.path,
-        type: item.type,
-        url: item.url
-      }));
+        number: parseInt(item.name.replace("v", "")),
+        path: item.path
+      }))
+      .sort((a, b) => b.number - a.number);
 
-    // Sort by number highest → lowest
-    versionFolders.sort((a, b) => b.number - a.number);
+    const content = {};
 
-    const latestVersion = versionFolders.length > 0 ? versionFolders[0] : null;
+    // Read content of each version folder
+    for (const v of versionFolders) {
+      content[v.name] = await readFolder(v.path);
+    }
 
+    // Highest version (example: v10)
+    const latest = versionFolders.length > 0 ? versionFolders[0] : null;
+
+    // Final Output
     return res.status(200).json({
-      version_count: versionFolders.length,
-      versions: versionFolders,     // all versions
-      latest: latestVersion         // highest version like v10, v22...
+      total: versionFolders.length,
+      versions: versionFolders,
+      latest,
+      content
     });
 
   } catch (error) {
-    return res.status(500).json({
-      error: error.message
-    });
+    return res.status(500).json({ error: error.message });
   }
 }
