@@ -16,14 +16,15 @@ export default async function handler(req, res) {
   };
 
   // -----------------------------------------------------------
-  // 1. GET request = fetch messages instantly (live polling)
+  // 1. GET = fetch messages (used for live UI updates)
   // -----------------------------------------------------------
   if (req.method === "GET") {
     const folder = req.query.folder;
     const day = req.query.day;
 
-    if (!folder || !day)
+    if (!folder || !day) {
       return res.status(400).json({ error: "folder and day required" });
+    }
 
     const filePath = `messages/${folder}/${day}.json`;
     const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
@@ -50,7 +51,7 @@ export default async function handler(req, res) {
   }
 
   // -----------------------------------------------------------
-  // 2. POST request = send a new message
+  // 2. POST = save new message
   // -----------------------------------------------------------
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
@@ -61,15 +62,19 @@ export default async function handler(req, res) {
   const senderId = body.from;
   const receiverId = body.to;
 
-  // unique message ID
+  // unique ID
   const messageId = "msg_" + Date.now() + "_" + Math.floor(Math.random() * 999999);
 
+  // NEW FIELDS also saved:
   const newMessage = {
     id: messageId,
     senderId,
     receiverId,
     category: body.category,
     videoUrl: body.videoUrl,
+    imageUrl: body.imageUrl || null,
+    songName: body.songName || null,
+    artistName: body.artistName || null,
     timestamp: body.timestamp || Math.floor(Date.now() / 1000)
   };
 
