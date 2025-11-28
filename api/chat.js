@@ -1,13 +1,10 @@
 import fetch from "node-fetch";
 
 export default async function handler(req, res) {
+
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
-
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "POST only" });
-  }
 
   const owner = "lirilabs";
   const repo = "liri-database-v1-2025";
@@ -18,17 +15,55 @@ export default async function handler(req, res) {
     "Content-Type": "application/json"
   };
 
-  // Incoming from client
-  // { from, to, category, videoUrl, timestamp }
+  // -----------------------------------------------------------
+  // 1. GET request = fetch messages instantly (live polling)
+  // -----------------------------------------------------------
+  if (req.method === "GET") {
+    const folder = req.query.folder;
+    const day = req.query.day;
+
+    if (!folder || !day)
+      return res.status(400).json({ error: "folder and day required" });
+
+    const filePath = `messages/${folder}/${day}.json`;
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
+
+    try {
+      const raw = await fetch(apiUrl, { headers });
+      if (raw.status !== 200) {
+        return res.status(200).json({ messages: [] });
+      }
+
+      const file = await raw.json();
+      const decoded = JSON.parse(Buffer.from(file.content, "base64").toString());
+
+      return res.status(200).json({
+        status: "ok",
+        folder,
+        file: day,
+        messages: decoded.items || []
+      });
+
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // -----------------------------------------------------------
+  // 2. POST request = send a new message
+  // -----------------------------------------------------------
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "POST only" });
+  }
+
   const body = req.body;
 
   const senderId = body.from;
   const receiverId = body.to;
 
-  // Unique message ID
+  // unique message ID
   const messageId = "msg_" + Date.now() + "_" + Math.floor(Math.random() * 999999);
 
-  // Final message object (clean)
   const newMessage = {
     id: messageId,
     senderId,
@@ -38,10 +73,8 @@ export default async function handler(req, res) {
     timestamp: body.timestamp || Math.floor(Date.now() / 1000)
   };
 
-  // Create unique folder for pair
   const folder = [senderId, receiverId].sort().join("_");
 
-  // Daily file
   const today = new Date().toISOString().split("T")[0];
   const filePath = `messages/${folder}/${today}.json`;
   const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
@@ -66,13 +99,11 @@ export default async function handler(req, res) {
   const existing = await getFile();
 
   if (!existing) {
-    // New file for today
     await upload({
       date: today,
       items: [newMessage]
     });
   } else {
-    // Append
     const json = JSON.parse(Buffer.from(existing.content, "base64").toString());
     json.items.push(newMessage);
     await upload(json, existing.sha);
