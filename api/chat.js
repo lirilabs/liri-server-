@@ -18,28 +18,39 @@ export default async function handler(req, res) {
     "Content-Type": "application/json"
   };
 
-  // Incoming item:
+  // Incoming from client
   // { from, to, category, videoUrl, timestamp }
-  const newItem = req.body;
+  const body = req.body;
 
-  const uid1 = newItem.from;
-  const uid2 = newItem.to;
+  const senderId = body.from;
+  const receiverId = body.to;
 
-  // Unique folder for pair
-  const folder = [uid1, uid2].sort().join("_");
+  // Unique message ID
+  const messageId = "msg_" + Date.now() + "_" + Math.floor(Math.random() * 999999);
 
-  // Daily file name
+  // Final message object (clean)
+  const newMessage = {
+    id: messageId,
+    senderId,
+    receiverId,
+    category: body.category,
+    videoUrl: body.videoUrl,
+    timestamp: body.timestamp || Math.floor(Date.now() / 1000)
+  };
+
+  // Create unique folder for pair
+  const folder = [senderId, receiverId].sort().join("_");
+
+  // Daily file
   const today = new Date().toISOString().split("T")[0];
   const filePath = `messages/${folder}/${today}.json`;
   const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
 
-  // Check file existence
   async function getFile() {
     const r = await fetch(apiUrl, { headers });
     return r.status === 200 ? await r.json() : null;
   }
 
-  // Upload file to GitHub
   async function upload(content, sha = null) {
     return fetch(apiUrl, {
       method: "PUT",
@@ -58,12 +69,12 @@ export default async function handler(req, res) {
     // New file for today
     await upload({
       date: today,
-      items: [newItem]
+      items: [newMessage]
     });
   } else {
-    // Append to existing file
+    // Append
     const json = JSON.parse(Buffer.from(existing.content, "base64").toString());
-    json.items.push(newItem);
+    json.items.push(newMessage);
     await upload(json, existing.sha);
   }
 
