@@ -65,7 +65,7 @@ export default async function handler(req, res) {
   // unique ID
   const messageId = "msg_" + Date.now() + "_" + Math.floor(Math.random() * 999999);
 
-  // NEW FIELDS also saved:
+  // NEW FIELDS ADDED HERE
   const newMessage = {
     id: messageId,
     senderId,
@@ -75,6 +75,8 @@ export default async function handler(req, res) {
     imageUrl: body.imageUrl || null,
     songName: body.songName || null,
     artistName: body.artistName || null,
+    title: body.title || null,        // NEW FIELD
+    reaction: body.reaction || null,  // NEW FIELD
     timestamp: body.timestamp || Math.floor(Date.now() / 1000)
   };
 
